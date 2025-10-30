@@ -24,7 +24,7 @@ describe("Security - Only API Gateway is accessible from host", function () {
   });
 
   it("gateway on 3003 should be reachable", async () => {
-    const result = await tryHttpGet("http://localhost:3003/").catch((e) => {
+    const result = await tryHttpGet("http://localhost:3003/health").catch((e) => {
       return { ok: false, error: e };
     });
     expect(result.ok).to.equal(true);

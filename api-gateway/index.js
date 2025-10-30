@@ -3,6 +3,18 @@ const httpProxy = require("http-proxy");
 
 const proxy = httpProxy.createProxyServer();
 const app = express();
+// Basic health endpoint so the gateway is reachable without proxying downstream services
+app.get("/health", (req, res) => {
+  res.json({ status: "ok" });
+});
+
+// Harden proxy: return 502 instead of crashing when targets are down
+proxy.on("error", (err, req, res) => {
+  if (!res.headersSent) {
+    res.statusCode = 502;
+    res.end(JSON.stringify({ error: "Bad gateway", message: err.message }));
+  }
+});
 //Endpoint Internal URI là "http://product:3001" (product-service), "http://order:3002" (order-service), "http://auth:3000" (auth-service)
 // Route requests to the auth service
 app.use("/auth", (req, res) => {
