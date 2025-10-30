@@ -1,0 +1,98 @@
+version: "3.8"
+
+services:
+  mongo:
+    image: mongo:6
+    container_name: mongo
+    restart: unless-stopped
+    ports:
+      - "37017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - app-network
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    restart: unless-stopped
+    ports:
+      - "5672:5672"    
+      - "15672:15672"   
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "status"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+    networks:
+      - app-network
+
+  auth:
+    build: ./auth
+    container_name: auth-service
+    env_file:
+      - ./auth/.env
+    restart: unless-stopped
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      mongo:
+        condition: service_started
+    networks:
+      - app-network
+
+  product:
+    build: ./product
+    container_name: product-service
+    env_file:
+      - ./product/.env
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      mongo:
+        condition: service_started
+    networks:
+      - app-network
+
+  order:
+    build: ./order
+    container_name: order-service
+    env_file:
+      - ./order/.env
+    restart: unless-stopped
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      mongo:
+        condition: service_started
+    networks:
+      - app-network
+
+  api-gateway:
+    build: ./api-gateway
+    container_name: api-gateway
+    ports:
+      - "3003:3003"
+    restart: unless-stopped
+    depends_on:
+      auth:
+        condition: service_started
+      product:
+        condition: service_started
+      order:
+        condition: service_started
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  mongo_data:

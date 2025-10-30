@@ -1,0 +1,55 @@
+1. Cơ chế giao tiếp giữa các micro-services
+    - Các micro-services giao tiếp với nhau theo cơ chế bất đồng bộ: 
+        + AMQP: Ở đây sử dụng công cụ RabbitMQ
+        + Polling dùng HTTP (không dùng cho dự án này)
+    - Đặc trưng của AMQP:
+        + Là 1 giao thức mã nguồn mở được chuẩn hóa theo phần mềm trung gian hướng theo việc gửi tin nhắn.
+        + Cho phép giao tiếp bất đồng bộ, đáng tin cậy giữa các ứng dụng
+        + Tính chất:
+            * Sử dung cơ chế đẩy Push-based: Theo đó có Provider sẽ tự động Push khi services có sự cập nhật
+                -> tự động đẩy thông báo cho Consumer
+            + Sử dụng Event-driven: Kiến trúc này rất phù hợp với kiến trúc hướng sự kiện trong đó các phản ứng đối với các sự kiện
+                được diễn ra tức thời thông qua có chế Message (đẩy tin)
+            + Độ tin cậy cao, cho phép sử lý việc gửi lại tin nhắn khi gửi tin nhắn không thành công
+            + Khả năng mở rộng: Các hàng đợi được tạo ra tách biệt so với Provider và Consumer do đó có thể mở rộng độc lập 
+            + Complexity: AMQP có độ phức tạp khi triển khai cao hơn với phương pháp Polling, đòi hỏi có sự chuyên sâu cao từ kỹ sư
+    - API Gateway là thành phần của micro-services:
+        + Thành phần:
+            * Request Routing: Cung cấp bộ định tuyến để tiếp nhận các yêu cầu của máy khách và điều hướng đến các dịch vujphuf hợp trong hệ thống
+            * Protocol: API Gateway hỗ trợ chuyển đổi giao thức sao cho phù hợp giữa máy khách và phi dịch vụ
+            * Authen và Author: Cung cấp cơ chế xác thực và ủy quyền tập trung để bảo mật hệ thống phi dịch vụ
+            * Request respond tranformation: Có thể sửa đổi Payload (tải trọng) cho Request và respond sao cho phù hợp với hệ thống
+            * Rate limiting: Hỗ trợ việc thiết lập giới hạn về số lượng lần truy cập giữa các máy khách nhằm phân bổ đều số lần truy cập cho các máy khách
+                -> Trách lạm dụng dịch vụ (Giống như việc crawl bị chặn là do dịch vụ này)
+            * Catching: Lưu trữ bộ nhớ đệm với các tài nguyên được Request thường xuyên nhằm phản hồi nhanh chóng, nâng cao hiệu suất hệ thống
+    - Kiến trúc micro-services này:
+        /Users/tranthithanhthao/Documents/HK1 (2025-2026)/LT HDV/Hình ảnh lý thuyết/IMG_1151.heic
+        Mô tả:
+            + Dịch vụ Authen: Dùng để xác thực và phân quyền người dùng về tài nguyên của các micro-services. Đóng vai trò bảo mật toàn bộ hệ thống
+            + Product-service: Quản lý liên quan sản phẩm, chi tiết sản phẩm, tồn kho, giá cả. Cung cấp API truy xuất thông tin sản phẩm - CRUD
+            + Order-service: Dịch vụ cung cấp quản lý đơn hàng, Đặt hàng, theo dõi trạng thái, tính tổng giá trị đơn hàng. Order-service sẽ giao tiếp với Product-service
+            + API-Gateway: Đóng vai trò làm điểm truy cập tập trung cho ứng dụng. Tất cả các Request từ Client đều phải đi qua API-Gateway
+    - Phân lớp:
+        + Model: Mô hình hóa cấu trúc dữ liệu, entity
+        + Repository: Đây là tầng xử lý các chức năng CRUD
+        + Service: Thiết kế các logic về nghiệp vụ
+        + Controller: bộ điều kiện tiếp nhận request để gọi tới services
+        + Middleware: Xử lý các Requests 
+    - Tổng quan quá trình giao tiếp giữa 2 dịch vụ Order và Product theo tuần tự:
+        1. Khi người dùng đặt hàng thông qua micro-service Product thông qua end-point /product/buy
+        2. micro-service product tiến hành tạo 1 bản chi tiết về hóa đơn và xuất bản (public) lên hàng đợi mang tên Order trong hệ thống giao tiếp Message-Queue
+            Bước này đảm bảo micro-service được tiếp nhận hóa đơn 
+            micro-service order lắng nghe các tin nhắn từ hàng đợi Order. Khi tin nhắn được push về Order-service thì Order-service tiến hành tiếp nhận thông tin chi tiết đơn hàng,
+            đối chiếu giá sản phẩm và sản phẩm rồi tạo ra 1 đơn hàng mới trong CSDL
+        3. Khi tạo thành công, Order-service đẩy tạo 1 thông tin chi tiết sản phẩm liên quan tới hóa đơn và public lên hàng đợi Product-Queue.
+        4. micro-service Product sẽ lắng nghe và push thông tin về Product-service lắng nghe -> RabbitMQ push về Product-service
+            -> Product-service nhận thông tin và xử lý push 1 hóa đơn phản hồi về Client (ví dụ là mua hàng thành công)
+    - 3 thành phần quan trọng trong RabbitMQ:
+        + Producer: Là một chương trình gửi tin nhắn lên Queue
+        + Hàng đợi (Queue): Tin nhắn được lưu trữ về Queue. Về cơ bản đây là bộ nhớ đệm được lưu trữ trong RAM, thực tế thì lưu trữ tạm trong DB, dùng Queue
+        + Consumer: Là một chương trình tiêu thụ dịch vụ sẽ lắng nghe tin nhắn được đẩy về từ Queue
+    - Làm thế nào để RabbitMQ giao tiếp với hệ thống:
+        + Chúng ta cần xây dựng 1 lớp tiện ích gọi là MessageBroker.js:
+            * Connect: Dùng để kết nối một ... tạo ra 1 cơn giao tếp Message
+            * Public Message: phương thức xuất bản tin nhắn đến hàng đợi được chỉ định->kết quả lắng nghe sẽ trả về hàm Callback
+            * Consumer: 
