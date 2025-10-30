@@ -77,13 +77,6 @@ services:
     ports:
       - "3003:3003"
     restart: unless-stopped
-    depends_on:
-      auth:
-        condition: service_started
-      product:
-        condition: service_started
-      order:
-        condition: service_started
     networks:
       - app-network
 

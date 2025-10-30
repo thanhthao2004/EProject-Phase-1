@@ -29,7 +29,10 @@ jobs:
         run: docker compose -f docker-compose.ci.yaml -p eproject-ci up -d
 
       - name: Wait for API Gateway
-        run: npx wait-on tcp:localhost:3003 --timeout 45000
+        run: npx wait-on tcp:localhost:3003 --timeout 90000
+
+      - name: Grace period for services
+        run: sleep 10
 
       - name: Run test suite
         run: npm test
