@@ -28,40 +28,47 @@ services:
 
   auth:
     build: ./auth
-    env_file:
-      - ./auth/.env
     restart: unless-stopped
     depends_on:
       rabbitmq:
         condition: service_healthy
       mongo:
         condition: service_started
+    environment:
+      # minimal defaults for CI
+      MONGO_URI: mongodb://mongo:27017/auth_db
+      JWT_SECRET: test-secret
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
     networks:
       - app-network
 
   product:
     build: ./product
-    env_file:
-      - ./product/.env
     restart: unless-stopped
     depends_on:
       rabbitmq:
         condition: service_healthy
       mongo:
         condition: service_started
+    environment:
+      MONGO_URI: mongodb://mongo:27017/product_db
+      JWT_SECRET: test-secret
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
     networks:
       - app-network
 
   order:
     build: ./order
-    env_file:
-      - ./order/.env
     restart: unless-stopped
     depends_on:
       rabbitmq:
         condition: service_healthy
       mongo:
         condition: service_started
+    environment:
+      MONGO_URI: mongodb://mongo:27017/order_db
+      JWT_SECRET: test-secret
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
     networks:
       - app-network
 
