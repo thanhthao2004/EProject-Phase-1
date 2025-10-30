@@ -1,0 +1,47 @@
+name: CI-CD
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  build-test-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install root deps
+        run: npm ci
+
+      - name: Build Docker images (CI compose)
+        run: docker compose -f docker-compose.ci.yaml -p eproject-ci build
+
+      - name: Start stack (CI compose)
+        run: docker compose -f docker-compose.ci.yaml -p eproject-ci up -d
+
+      - name: Wait for API Gateway
+        run: npx wait-on tcp:localhost:3003 --timeout 45000
+
+      - name: Run test suite
+        run: npm test
+
+      - name: Show container status (on failure)
+        if: failure()
+        run: |
+          docker compose -f docker-compose.ci.yaml -p eproject-ci ps
+          docker compose -f docker-compose.ci.yaml -p eproject-ci logs --no-color
+
+      - name: Tear down (always)
+        if: always()
+        run: docker compose -f docker-compose.ci.yaml -p eproject-ci down -v
+
+
