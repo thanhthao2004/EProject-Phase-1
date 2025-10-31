@@ -2,7 +2,7 @@
 
 ## TỔNG QUAN DỰ ÁN
 
-Đây là hệ thống thương mại điện tử được xây dựng theo **kiến trúc Microservices** sử dụng Node.js, MongoDB, và RabbitMQ, chạy trên Docker container.
+Đây là hệ thống được xây dựng theo **kiến trúc Microservices** sử dụng Node.js, MongoDB, và RabbitMQ, chạy trên Docker container.
 
 Link Github: https://github.com/thanhthao2004/EProject-Phase-1
 
