@@ -11,7 +11,6 @@ class ProductController {
     this.createOrder = this.createOrder.bind(this);
     this.getOrderStatus = this.getOrderStatus.bind(this);
     this.ordersMap = new Map();
-    this.getProductbyId = this.getProductbyId.bind(this);
   }
 
   async createProduct(req, res, next) {
